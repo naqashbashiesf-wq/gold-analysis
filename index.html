@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سیستم تحلیل طلا</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap');
+        body { font-family: 'Vazirmatn', sans-serif; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const RefreshIcon = () => (
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+        );
+
+        const TrendingUpIcon = () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
+        );
+
+        const TrendingDownIcon = () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+            </svg>
+        );
+
+        const MinusIcon = () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+            </svg>
+        );
+
+        const GoldPriceTracker = () => {
+            const [goldPrice, setGoldPrice] = useState(2650.50);
+            const [silverPrice, setSilverPrice] = useState(30.25);
+            const [usdRate, setUsdRate] = useState(107500);
+            const [mesghalMarket, setMesghalMarket] = useState(48059000);
+            const [geram18Market, setGeram18Market] = useState(3500000);
+            const [dirhamRate, setDirhamRate] = useState(16500);
+            const [uaeGoldPrice, setUaeGoldPrice] = useState(240);
+            const [lastUpdate, setLastUpdate] = useState(new Date());
+            const [isLoading, setIsLoading] = useState(false);
+
+            const MESGHAL_DIVIDER = 9.5742;
+            const GRAM_PER_OUNCE = 31.1;
+
+            const mesghalTheo = (goldPrice * usdRate) / MESGHAL_DIVIDER;
+            const diffMesghal = mesghalTheo - mesghalMarket;
+            
+            const geram18Theo = ((goldPrice / GRAM_PER_OUNCE) * usdRate) * 0.75;
+            const diffGeram18 = geram18Theo - geram18Market;
+            
+            const realValueDirham = dirhamRate * uaeGoldPrice;
+            const diffDirham = realValueDirham - geram18Market;
+            
+            const gsRatio = goldPrice / silverPrice;
+
+            const formatNumber = (num) => {
+                return new Intl.NumberFormat('fa-IR').format(Math.round(num));
+            };
+
+            const handleRefresh = () => {
+                setIsLoading(true);
+                setTimeout(() => {
+                    setGoldPrice(prev => prev + (Math.random() - 0.5) * 10);
+                    setSilverPrice(prev => prev + (Math.random() - 0.5) * 0.5);
+                    setUsdRate(prev => prev + (Math.random() - 0.5) * 1000);
+                    setLastUpdate(new Date());
+                    setIsLoading(false);
+                }, 1000);
+            };
+
+            const getSignal = (diff, high, low) => {
+                if (diff > high) return { text: "خرید نامناسب", color: "text-red-600 bg-red-50", Icon: TrendingDownIcon };
+                if (diff > low) return { text: "متوسط - صبر کنید", color: "text-yellow-600 bg-yellow-50", Icon: MinusIcon };
+                if (diff > 0) return { text: "✅ بهترین خرید!", color: "text-green-600 bg-green-50", Icon: TrendingUpIcon };
+                if (diff > -low) return { text: "✅ بهترین فروش!", color: "text-green-600 bg-green-50", Icon: TrendingUpIcon };
+                if (diff > -high) return { text: "متوسط فروش", color: "text-yellow-600 bg-yellow-50", Icon: MinusIcon };
+                return { text: "فروش نامناسب", color: "text-red-600 bg-red-50", Icon: TrendingDownIcon };
+            };
+
+            const signalMesghal = getSignal(diffMesghal, 300000, 100000);
+            const signalGeram18 = getSignal(diffGeram18, 150000, 50000);
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-white to-yellow-50 p-3">
+                    <div className="max-w-6xl mx-auto">
+                        <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-2xl p-4 mb-4 shadow-xl">
+                            <div className="flex justify-between items-center mb-3">
+                                <div>
+                                    <h1 className="text-2xl font-bold text-white mb-1">سیستم تحلیل طلا</h1>
+                                    <p className="text-yellow-100 text-sm">تحلیل لحظه‌ای با ۴ فرمول</p>
+                                </div>
+                                <button
+                                    onClick={handleRefresh}
+                                    disabled={isLoading}
+                                    className="bg-white text-yellow-600 p-3 rounded-xl hover:bg-yellow-50 transition-all disabled:opacity-50"
+                                >
+                                    <div className={isLoading ? 'animate-spin' : ''}>
+                                        <RefreshIcon />
+                                    </div>
+                                </button>
+                            </div>
+                            <div className="text-yellow-100 text-xs">
+                                آخرین به‌روزرسانی: {lastUpdate.toLocaleTimeString('fa-IR')}
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-3 mb-4">
+                            <div className="bg-white rounded-xl p-3 shadow-lg border-r-4 border-yellow-500">
+                                <span className="text-gray-600 text-xs block mb-1">انس جهانی طلا</span>
+                                <div className="text-xl font-bold text-gray-800">${goldPrice.toFixed(2)}</div>
+                            </div>
+                            
+                            <div className="bg-white rounded-xl p-3 shadow-lg border-r-4 border-blue-500">
+                                <span className="text-gray-600 text-xs block mb-1">انس نقره</span>
+                                <div className="text-xl font-bold text-gray-800">${silverPrice.toFixed(2)}</div>
+                            </div>
+                            
+                            <div className="bg-white rounded-xl p-3 shadow-lg border-r-4 border-green-500">
+                                <span className="text-gray-600 text-xs block mb-1">دلار بازار</span>
+                                <div className="text-xl font-bold text-gray-800">{formatNumber(usdRate)} تومان</div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="bg-white rounded-xl p-4 shadow-xl">
+                                <h3 className="text-lg font-bold text-gray-800 mb-3 border-b pb-2">📊 فرمول مثقال</h3>
+                                <div className="space-y-2 text-sm">
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600">مثقال بازار:</span>
+                                        <span className="font-bold">{formatNumber(mesghalMarket)} ت</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600">مثقال تئوریک:</span>
+                                        <span className="font-bold">{formatNumber(mesghalTheo)} ت</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600">تفاوت:</span>
+                                        <span className={`font-bold ${diffMesghal > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                            {formatNumber(Math.abs(diffMesghal))} ت
+                                        </span>
+                                    </div>
+                                    <div className={`flex items-center gap-2 p-2 rounded-lg ${signalMesghal.color}`}>
+                                        <signalMesghal.Icon />
+                                        <span className="font-bold text-xs">{signalMesghal.text}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-white rounded-xl p-4 shadow-xl">
+                                <h3 className="text-lg font-bold text-gray-800 mb-3 border-b pb-2">💎 فرمول ۱۸ عیار</h3>
+                                <div className="space-y-2 text-sm">
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600">۱۸ عیار بازار:</span>
+                                        <span className="font-bold">{formatNumber(geram18Market)} ت/گ</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600">۱۸ عیار تئوریک:</span>
+                                        <span className="font-bold">{formatNumber(geram18Theo)} ت/گ</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600">تفاوت:</span>
+                                        <span className={`font-bold ${diffGeram18 > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                            {formatNumber(Math.abs(diffGeram18))} ت
+                                        </span>
+                                    </div>
+                                    <div className={`flex items-center gap-2 p-2 rounded-lg ${signalGeram18.color}`}>
+                                        <signalGeram18.Icon />
+                                        <span className="font-bold text-xs">{signalGeram18.text}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-white rounded-xl p-4 shadow-xl">
+                                <h3 className="text-lg font-bold text-gray-800 mb-3 border-b pb-2">🇦🇪 فرمول درهم/امارات</h3>
+                                <div className="space-y-2 text-sm">
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600">ارزش واقعی:</span>
+                                        <span className="font-bold">{formatNumber(realValueDirham)} ت</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600">قیمت ایران:</span>
+                                        <span className="font-bold">{formatNumber(geram18Market)} ت</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600">تفاوت:</span>
+                                        <span className={`font-bold ${diffDirham > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                            {formatNumber(Math.abs(diffDirham))} ت
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-white rounded-xl p-4 shadow-xl">
+                                <h3 className="text-lg font-bold text-gray-800 mb-3 border-b pb-2">⚖️ نسبت طلا/نقره</h3>
+                                <div className="space-y-2 text-sm">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-gray-600">نسبت فعلی:</span>
+                                        <span className="font-bold text-2xl">{gsRatio.toFixed(2)}</span>
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                        محدوده طبیعی: ۶۵ تا ۸۵
+                                    </div>
+                                    <div className={`p-2 rounded-lg text-center ${
+                                        gsRatio < 65 ? 'bg-green-50 text-green-600' :
+                                        gsRatio > 85 ? 'bg-blue-50 text-blue-600' :
+                                        'bg-gray-50 text-gray-600'
+                                    }`}>
+                                        <span className="font-bold text-xs">
+                                            {gsRatio < 65 ? '🟢 طلا ارزشمندتر' :
+                                             gsRatio > 85 ? '🔵 نقره ارزشمندتر' :
+                                             '⚪ نسبت خنثی'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-6 text-center text-gray-500 text-xs p-4 bg-white rounded-xl">
+                            <p className="mb-1">🚀 نسخه آزمایشی رایگان</p>
+                            <p>برای دسترسی به قیمت‌های لحظه‌ای ثبت‌نام کنید</p>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<GoldPriceTracker />, document.getElementById('root'));
+    </script>
+</body>
+</html>
